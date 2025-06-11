@@ -114,17 +114,38 @@ export const toggleEnrollment = async (req, res) => {
     res.status(500).json({ error: 'Server error during enrollment', details: error.message });
   }
 };
+
+
 export const getPopularCourses = async (req, res, next) => {
   try {
     const popularCourses = await Course.find()
       .sort({ 'enrolledUsers.length': -1 }) 
       .limit(6);
-
-   
     const sorted = popularCourses.sort((a, b) => b.enrolledUsers.length - a.enrolledUsers.length);
 
     res.status(200).json({ success: true, courses: sorted });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch popular courses', details: err.message });
+  }
+};
+
+export const getIndividualCourse = async (req, res) => {
+  const { courseId } = req.params;
+
+  try {
+    const course = await Course.findById(courseId);
+
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    res.status(200).json({ success: true, course });
+  } catch (error) {
+    console.error('Error fetching course:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve course',
+      details: error.message,
+    });
   }
 };

@@ -2,12 +2,7 @@ import Course from '../Models/Course.js';
 
 // Create a new course
 export const createCourse = async (req, res) => {
-  const queryEmail = req.query.email;
-  const tokenEmail = req.user?.email;
-
-  if (queryEmail !== tokenEmail) {
-    return res.status(403).json({ error: 'Unauthorized access' });
-  }
+ 
 
   const { title, description, imageURL, duration, createdBy, totalSeats } = req.body;
 
@@ -76,24 +71,22 @@ export const toggleEnrollment = async (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Check if user already enrolled
+ 
     const isUserEnrolled = course.enrolledUsers.find(u => u.uid === user.uid);
 
     if (isUserEnrolled) {
-      // Unenroll the user
       course.enrolledUsers = course.enrolledUsers.filter(u => u.uid !== user.uid);
       await course.save();
       return res.status(200).json({ message: 'User unenrolled successfully', course });
     } else {
-      // Check seat availability
       if (course.enrolledUsers.length >= course.totalSeats) {
         return res.status(400).json({ error: 'No seats left in this course' });
       }
 
-      // Check if user enrolled in >= 3 courses
       const userEnrolledCoursesCount = await Course.countDocuments({
         'enrolledUsers.uid': user.uid,
       });
+      console.log('User enrolled courses count:', userEnrolledCoursesCount);
 
       if (userEnrolledCoursesCount >= 3) {
         return res.status(400).json({ error: 'User cannot enroll in more than 3 courses' });
@@ -149,3 +142,123 @@ export const getIndividualCourse = async (req, res) => {
     });
   }
 };
+export const myEnrollments = async (req, res) => {
+  const user = req.user;
+
+  if (!user || !user.uid) {
+    return res.status(401).json({ success: false, error: 'Unauthorized or missing user data' });
+  }
+
+  try {
+    const courses = await Course.find({
+      'enrolledUsers.uid': user.uid,
+    });
+
+    if (courses.length === 0) {
+      return res.status(200).json({ success: true, courses: [] }); // return empty array instead of 404
+    }
+
+    res.status(200).json({ success: true, courses });
+  } catch (error) {
+    console.error('Error fetching user courses:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve user courses',
+      details: error.message,
+    });
+  }
+};
+
+export const getCoursesByUser = async (req, res) => {
+  const user = req.user;
+
+  try {
+    const courses = await Course.find({
+      'createdBy.uid': user.uid,
+    });
+
+    if (courses.length === 0) {
+      return res.status(404).json({ success: false, message: 'No courses found for this user' });
+    }
+
+    res.status(200).json({ success: true, courses });
+  } catch (error) {
+    console.error('Error fetching user courses:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve user courses',
+      details: error.message,
+    });
+  }
+}
+
+export const removeEnrollment = async (req, res) => {
+  const { courseId } = req.params;
+  const user = req.user;
+
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+    const isUserEnrolled = course.enrolledUsers.find(u => u.uid === user.uid);
+    if (!isUserEnrolled) {
+      return res.status(400).json({ error: 'User is not enrolled in this course' });
+    }
+    course.enrolledUsers = course.enrolledUsers.filter(u => u.uid !== user.uid);
+    await course.save();
+    res.status(200).json({ message: 'User unenrolled successfully', course });
+  } catch (error) {
+    console.error('Error removing enrollment:', error);
+    res.status(500).json({ error: 'Server error during unenrollment', details: error.message });
+  } 
+}
+
+
+export const removeCourse = async (req, res) => {
+  const { courseId } = req.params;
+  const user = req.user;
+
+  try {
+    const course = await Course.findById(courseId); 
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+    if (course.createdBy.uid !== user.uid) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    await Course.findByIdAndDelete(courseId);
+    res.status(200).json({ message: 'Course deleted successfully' });
+  }
+  catch (error) {
+    console.error('Error deleting course:', error);
+    res.status(500).json({ error: 'Server error during course deletion', details: error.message });
+  } 
+}
+
+export const updateCourse = async (req, res) => {
+  const { courseId } = req.params;
+  const user = req.user;
+  const { title, description, imageURL, duration, totalSeats } = req.body;
+
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+    if (course.createdBy.uid !== user.uid) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    course.title = title || course.title;
+    course.description = description || course.description;
+    course.imageURL = imageURL || course.imageURL;
+    course.duration = duration || course.duration;
+    course.totalSeats = totalSeats || course.totalSeats;
+    const updatedCourse = await course.save();
+    res.status(200).json({ success: true, course: updatedCourse }); 
+  }
+  catch (error) {
+    console.error('Error updating course:', error);
+    res.status(500).json({ error: 'Server error during course update', details: error.message });
+  }
+}

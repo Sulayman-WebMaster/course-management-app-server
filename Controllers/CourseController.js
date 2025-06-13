@@ -111,16 +111,22 @@ export const toggleEnrollment = async (req, res) => {
 
 export const getPopularCourses = async (req, res, next) => {
   try {
-    const popularCourses = await Course.find()
-      .sort({ 'enrolledUsers.length': -1 }) 
-      .limit(6);
-    const sorted = popularCourses.sort((a, b) => b.enrolledUsers.length - a.enrolledUsers.length);
+    const popularCourses = await Course.aggregate([
+      {
+        $addFields: {
+          enrolledCount: { $size: { $ifNull: ["$enrolledUsers", []] } } 
+        }
+      },
+      { $sort: { enrolledCount: -1 } },
+      { $limit: 6 } 
+    ]);
 
-    res.status(200).json({ success: true, courses: sorted });
+    res.status(200).json({ success: true, courses: popularCourses });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch popular courses', details: err.message });
   }
 };
+
 
 export const getIndividualCourse = async (req, res) => {
   const { courseId } = req.params;

@@ -4,7 +4,7 @@ import connectDB from './utils/database.js';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import courseRoutes from './Routes/courseRoute.js';
-import verifyToken from './Middlewares/verityToken.js';
+
 
 dotenv.config();
 const app = express();
@@ -14,7 +14,12 @@ connectDB()
 // applicaton level middleware
 app.use(express.json());
 app.use(cookieParser())
-app.use(cors());   
+app.use(cors({
+    origin:process.env.CLIENT_URL,
+    credentials: true, 
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], 
+    allowedHeaders: ['Content-Type', 'Authorization'] 
+}));   
 app.get('/',(req,res)=>{
     res.send("server is ok")
 })

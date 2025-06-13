@@ -86,7 +86,7 @@ export const toggleEnrollment = async (req, res) => {
       const userEnrolledCoursesCount = await Course.countDocuments({
         'enrolledUsers.uid': user.uid,
       });
-      console.log('User enrolled courses count:', userEnrolledCoursesCount);
+    
 
       if (userEnrolledCoursesCount >= 3) {
         return res.status(400).json({ error: 'User cannot enroll in more than 3 courses' });
@@ -155,7 +155,7 @@ export const myEnrollments = async (req, res) => {
     });
 
     if (courses.length === 0) {
-      return res.status(200).json({ success: true, courses: [] }); // return empty array instead of 404
+      return res.status(200).json({ success: true, courses: [] }); 
     }
 
     res.status(200).json({ success: true, courses });

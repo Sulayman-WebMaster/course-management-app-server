@@ -52,7 +52,7 @@ export const getLatestCourses = async (req, res) => {
   try {
     const courses = await Course.find()
       .sort({ createdAt: -1 })
-      .limit(6);
+      .limit(8);
 
     res.status(200).json({ success: true, courses });
   } catch (err) {
@@ -118,7 +118,7 @@ export const getPopularCourses = async (req, res, next) => {
         }
       },
       { $sort: { enrolledCount: -1 } },
-      { $limit: 6 } 
+      { $limit: 8 } 
     ]);
 
     res.status(200).json({ success: true, courses: popularCourses });
